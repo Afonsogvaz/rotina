@@ -96,8 +96,8 @@ const actions = {
   toggle(el) {
     const g = goalById(el.dataset.id), k = curDay();
     if (!g) return;
-    const nowDone = val(k, g) !== true;
-    setVal(k, g, nowDone ? true : null);
+    const nowDone = g.freq === 'weekly' ? weeklyToggle(k, g) : (val(k, g) !== true);
+    if (g.freq !== 'weekly') setVal(k, g, nowDone ? true : null);
     ui.pop = nowDone ? g.id : null;
     render(); ui.pop = null;
   },
@@ -105,6 +105,13 @@ const actions = {
   step(el) {
     const g = goalById(el.dataset.id), k = curDay();
     if (!g) return;
+    if (g.freq === 'weekly') {
+      const ok = weeklyAdjust(k, g, Number(el.dataset.dir) * effParams(g, k).step);
+      ui.pop = ok && isDone(k, g) ? g.id : null;
+      render(); ui.pop = null;
+      if (!ok) toast('Isso foi registado noutro dia. Vai a esse dia para o tirar.');
+      return;
+    }
     const input = el.parentElement.querySelector('input');
     const typed = input ? parseNum(input.value) : null;
     const base = typed !== null ? typed : (typeof val(k, g) === 'number' ? val(k, g) : 0);
@@ -205,6 +212,10 @@ const actions = {
     Object.keys(state.weekly).forEach(w => {
       delete state.weekly[w][g.id];
       if (!Object.keys(state.weekly[w]).length) delete state.weekly[w];
+    });
+    Object.keys(state.wdays).forEach(k => {
+      delete state.wdays[k][g.id];
+      if (!Object.keys(state.wdays[k]).length) delete state.wdays[k];
     });
     state.modes.forEach(m => { delete m.rules[g.id]; });
     save(); closeSheet(); render(); toast('Meta apagada');
@@ -358,6 +369,17 @@ document.addEventListener('change', e => {
     const g = goalById(t.dataset.num), k = curDay();
     if (!g) return;
     const raw = t.value.trim();
+    if (g.freq === 'weekly') {
+      const cur = (state.weekly[weekStart(k)] || {})[g.id];
+      if (raw === '') weeklyClear(k, g);
+      else {
+        const n = parseNum(raw);
+        if (n === null) return;
+        const delta = Math.max(0, n) - (typeof cur === 'number' ? cur : 0);
+        if (!weeklyAdjust(k, g, delta)) toast('Isso foi registado noutro dia. Vai a esse dia para o tirar.');
+      }
+      render(); return;
+    }
     if (raw === '') setVal(k, g, null);
     else {
       const n = parseNum(raw);

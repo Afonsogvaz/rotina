@@ -67,6 +67,20 @@ function weekdayPattern() {
   return acc.map(a => ({ pct: a.t ? a.d / a.t : null, n: a.n }));
 }
 
+function weeklyDayPattern() {                      // quando fazes as metas semanais?
+  const gs = state.goals.filter(g => g.freq === 'weekly');
+  const total = Array(7).fill(0), per = {};
+  gs.forEach(g => { per[g.id] = Array(7).fill(0); });
+  Object.keys(state.wdays).forEach(k => {
+    const i = (parseKey(k).getDay() + 6) % 7;
+    gs.forEach(g => {
+      const n = state.wdays[k][g.id];
+      if (n > 0) { const c = g.kind === 'number' ? n : 1; total[i] += c; per[g.id][i] += c; }
+    });
+  });
+  return { gs, total, per };
+}
+
 function keystone() {                              // que meta "puxa" as outras?
   const days = statDays(), items = [];
   state.goals.filter(g => g.freq !== 'weekly').forEach(g => {
@@ -293,7 +307,7 @@ function csvText() {
     return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
   const head = ['data', 'dia_semana', 'modo', 'cumprimento_pct'].concat(gs.map(g => g.name),
-    ['sono_deitar', 'sono_acordar', 'sono_horas', 'sono_qualidade', 'humor', 'cansaco_manha', 'cansaco_tarde', 'cansaco_noite', 'nota']);
+    ['semanais_feitas_no_dia', 'sono_deitar', 'sono_acordar', 'sono_horas', 'sono_qualidade', 'humor', 'cansaco_manha', 'cansaco_tarde', 'cansaco_noite', 'nota']);
   const wd = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
   const rows = [head.map(cell).join(';')];
   for (let k = minDay(); k <= tk; k = addDays(k, 1)) {
@@ -318,7 +332,7 @@ function csvText() {
       return g.kind === 'check' ? (v === true ? 1 : 0) : (typeof v === 'number' ? v : '');
     });
     rows.push([k, wd[parseKey(k).getDay()], m ? m.mode.name : '', di.total ? Math.round(di.pct * 100) : ''].concat(goalCells,
-      [sl.bed, sl.wake, sleepHours(k), sl.q, c.mood, c.tm, c.ta, c.tn, c.note]).map(cell).join(';'));
+      [Object.keys(state.wdays[k] || {}).map(id => { const g = goalById(id); return g ? g.name + (state.wdays[k][id] > 1 ? ' x' + state.wdays[k][id] : '') : null; }).filter(Boolean).join(' + '), sl.bed, sl.wake, sleepHours(k), sl.q, c.mood, c.tm, c.ta, c.tn, c.note]).map(cell).join(';'));
   }
   return '﻿' + rows.join('\r\n');
 }

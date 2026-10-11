@@ -143,6 +143,53 @@ function setVal(k, g, v) {
   save();
 }
 
+/* ---------- metas semanais: em que dia foi feito ----------
+   state.weekly[segunda][meta] continua a ser o total da semana (é o que avalia a meta).
+   state.wdays[dia][meta] guarda quantas vezes foi feito nesse dia, só para saber quando e para a análise. */
+const wdone = (k, g) => (state.wdays[k] || {})[g.id] || 0;
+function weekDated(wk, g) {
+  const r = [];
+  for (let i = 0; i < 7; i++) { const k = addDays(wk, i), n = wdone(k, g); if (n > 0) r.push([k, n]); }
+  return r;
+}
+function setWday(k, g, n) {
+  const d = state.wdays[k] || (state.wdays[k] = {});
+  if (n > 0) d[g.id] = n; else delete d[g.id];
+  if (!Object.keys(d).length) delete state.wdays[k];
+}
+function weeklyToggle(k, g) {                     // sim/não semanal
+  const wk = weekStart(k);
+  if ((state.weekly[wk] || {})[g.id] === true) {
+    for (let i = 0; i < 7; i++) setWday(addDays(wk, i), g, 0);
+    setVal(k, g, null); return false;
+  }
+  setWday(k, g, 1); setVal(k, g, true); return true;
+}
+function weeklyAdjust(k, g, delta) {              // contagem semanal: soma ou tira ao dia k
+  const wk = weekStart(k), cur = (state.weekly[wk] || {})[g.id];
+  const total = typeof cur === 'number' ? cur : 0;
+  const dated = weekDated(wk, g).reduce((s, x) => s + x[1], 0), here = wdone(k, g);
+  const r2 = x => Math.round(x * 100) / 100;
+  if (delta >= 0) { setWday(k, g, r2(here + delta)); setVal(k, g, r2(total + delta)); return true; }
+  const want = -delta, fromDay = Math.min(here, want), fromUndated = Math.min(Math.max(0, total - dated), want - fromDay);
+  if (fromDay + fromUndated <= 0) return false;   // foi feito noutro dia: tira nesse dia
+  setWday(k, g, r2(here - fromDay)); setVal(k, g, r2(total - fromDay - fromUndated));
+  return true;
+}
+function weeklyClear(k, g) {
+  const wk = weekStart(k);
+  for (let i = 0; i < 7; i++) setWday(addDays(wk, i), g, 0);
+  setVal(k, g, null);
+}
+const DOW3 = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+function weekDatedText(k, g) {
+  const wk = weekStart(k), d = weekDated(wk, g), cur = (state.weekly[wk] || {})[g.id];
+  const parts = d.map(([dk, n]) => DOW3[wdOf(dk)] + (g.kind === 'number' && n !== 1 ? ' ×' + fmtNum(n) : ''));
+  const sum = d.reduce((s, x) => s + x[1], 0);
+  if (g.kind === 'number' ? (typeof cur === 'number' && cur - sum > 0) : (cur === true && !d.length)) parts.push('sem dia');
+  return parts.length ? 'feito: ' + parts.join(', ') : '';
+}
+
 function isRegistered(k) {
   const l = state.logs[k];
   return !!(state.closed[k] || (l && Object.keys(l).length) || state.sleep[k] || state.checks[k]);

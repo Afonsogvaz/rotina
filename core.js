@@ -6,7 +6,7 @@
 const KEY = 'rotina:v1';                  // (o nome da chave mantém-se; a versão dos dados vai em state.v)
 const BAK_KEY = 'rotina:bak-v2';          // cópia automática feita antes de migrar dados antigos
 const SCHEMA = 3;
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.5';
 const FIRST_DAY = '2026-10-13';
 const ROUTINE_START = '2026-10-06';       // dia em que a rotina nova começou
 const EMOJIS = ['🌅','📰','📚','📖','🌙','📵','🏋️','⚽','🏃','🧘','💧','🥗','☕','🧠','✍️','🎸','🎧','🌿','⏰','🎯','🤝','🧹','🛏️','🍎'];
@@ -70,7 +70,7 @@ function newState() {
   return {
     v: SCHEMA,
     settings: { rollover: 4, sleepGoal: 8, lastBackup: null },
-    cats: [], goals: [], logs: {}, weekly: {}, sleep: {}, checks: {}, modes: [], spans: [], closed: {}
+    cats: [], goals: [], logs: {}, weekly: {}, wdays: {}, sleep: {}, checks: {}, modes: [], spans: [], closed: {}
   };
 }
 
@@ -170,6 +170,7 @@ function normalize(s) {
   base.goals = Array.isArray(s && s.goals) ? s.goals.filter(g => g && g.id && g.name).map(cleanGoal) : [];
   base.logs = isObj(s && s.logs) ? s.logs : {};
   base.weekly = isObj(s && s.weekly) ? s.weekly : {};
+  base.wdays = isObj(s && s.wdays) ? s.wdays : {};
   base.sleep = cleanSleep(s && s.sleep);
   base.checks = cleanChecks(s && s.checks);
   base.closed = isObj(s && s.closed) ? s.closed : {};

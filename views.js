@@ -16,6 +16,12 @@ function catGroups(goals) {
 const catDot = c => `<span class="dot" style="background:${c ? c.color : 'var(--box)'}"></span>`;
 
 function hintText(k, g) {
+  if (g.freq === 'weekly') {
+    const dt = weekDatedText(k, g);
+    if (g.kind !== 'number') return dt;
+    const p0 = effParams(g, k);
+    return `${p0.cmp === 'max' ? 'no máximo' : 'no mínimo'} ${fmtNum(p0.target)}${p0.unit ? ' ' + p0.unit : ''}${dt ? ' · ' + dt : ''}`;
+  }
   if (g.kind !== 'number') return '';
   const p = effParams(g, k), alt = typeof ruleFor(g, k) === 'number';
   let t = `${p.cmp === 'max' ? 'no máximo' : 'no mínimo'} ${fmtNum(p.target)}${p.unit ? ' ' + p.unit : ''}`;
@@ -105,7 +111,7 @@ function rowHTML(k, g) {
   if (g.kind === 'check') {
     return `<button class="row ${done ? 'is-done' : ''} ${pop}" data-act="toggle" data-id="${g.id}" data-rowid="${g.id}" aria-pressed="${done}">
       <span class="emo">${esc(g.emoji)}</span>
-      <span class="name">${esc(g.name)}</span>
+      <span class="name">${esc(g.name)}${g.freq === 'weekly' && hintText(k, g) ? `<span class="hint">${esc(hintText(k, g))}</span>` : ''}</span>
       <span class="box">${ICON.check}</span>
     </button>`;
   }
@@ -382,6 +388,17 @@ function patternsHTML() {
       const hi = ok.reduce((a, b) => (b.x.pct > a.x.pct ? b : a)), lo = ok.reduce((a, b) => (b.x.pct < a.x.pct ? b : a));
       if (hi.x.pct - lo.x.pct >= 0.1) html += `<p class="cap">O teu dia mais forte é ${names[hi.i].toLowerCase()} (${pctTxt(hi.x.pct)}) e o mais fraco é ${names[lo.i].toLowerCase()} (${pctTxt(lo.x.pct)}).</p>`;
     }
+  }
+  const wdp = weeklyDayPattern(), wtot = wdp.total.reduce((a, b) => a + b, 0);
+  html += '<h3 class="sub-title">Quando fazes as metas semanais</h3>';
+  if (wtot < 3) html += '<p class="cap">Ainda faltam registos: cada vez que fizeres uma meta semanal, a app guarda o dia. Com 3 ou mais já aparece aqui.</p>';
+  else {
+    html += `<div class="group pad">${countBars(wdp.total.map((n, i) => ({ label: names[i], n })), 'Metas semanais feitas por dia da semana')}</div>`;
+    const full = ['segundas', 'terças', 'quartas', 'quintas', 'sextas', 'sábados', 'domingos'];
+    html += '<div class="group">' + wdp.gs.filter(g => wdp.per[g.id].some(x => x > 0)).map(g => {
+      const a = wdp.per[g.id], sum = a.reduce((x, y) => x + y, 0), mx = Math.max(...a), best = a.map((x, i) => i).filter(i => a[i] === mx);
+      return `<div class="kv"><span>${esc(g.emoji)} ${esc(g.name)}<small>${sum} ${sum === 1 ? 'vez' : 'vezes'} registadas${sum >= 3 ? ', mais ' + best.map(i => 'às ' + full[i]).join(' e ').replace('às domingos', 'ao domingo').replace('às sábados', 'ao sábado') : ''}</small></span><b>${sum}</b></div>`;
+    }).join('') + '</div>';
   }
   const ks = keystone();
   html += '<h3 class="sub-title">Que meta puxa as outras?</h3>';

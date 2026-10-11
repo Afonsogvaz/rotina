@@ -39,6 +39,18 @@ function barChart(items, opts) {                    // items: [{label, v (0..1 |
     }).join('') + '</svg>';
 }
 
+function countBars(items, label) {                 // items: [{label, n}] com números inteiros
+  const W = 340, H = 140, T = 18, B = 24, gap = 10, max = Math.max(1, ...items.map(i => i.n));
+  const bw = (W - gap * (items.length + 1)) / items.length;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label || 'Gráfico de barras')}">` +
+    items.map((it, i) => {
+      const x = gap + i * (bw + gap), h = (H - T - B) * it.n / max, y = H - B - h;
+      return `<rect class="ch-bar ${it.n === max && max > 0 ? 'hi' : ''}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h, it.n ? 2 : 0).toFixed(1)}" rx="5"><title>${esc(it.label)}: ${it.n}</title></rect>
+        <text class="ch-txt" x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${esc(it.label)}</text>
+        <text class="ch-txt v" x="${(x + bw / 2).toFixed(1)}" y="${(y - 4).toFixed(1)}" text-anchor="middle">${it.n || ''}</text>`;
+    }).join('') + '</svg>';
+}
+
 function sparkBars(vals) {                          // mini barras (0..1 | null)
   return `<span class="spark" aria-hidden="true">${vals.map(v => `<i class="${v === null ? 'nil' : ''}" style="height:${v === null ? 4 : Math.max(4, Math.round(v * 26))}px"></i>`).join('')}</span>`;
 }
